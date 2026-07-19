@@ -30,7 +30,7 @@ public class Embedding {
 
     @Column(name = "embedding", nullable = false)
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = 768)
+    @Array(length =3072 )
     private float[] embedding;
 
     @CreationTimestamp

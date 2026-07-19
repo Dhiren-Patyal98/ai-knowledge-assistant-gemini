@@ -15,18 +15,28 @@ public class EmbeddingServiceImpl implements EmbeddingService{
 
     private final EmbeddingModel embeddingModel;
 
+//    @Override
+//    public float[] generateEmbedding(String text)
+//    {
+//
+//
+//
+//       float[] embedding = embeddingModel.embed(text);
+//
+//       log.info("Generated embedding with {} dimensions",embedding.length);
+//
+//        return embedding;
+//
+//
+//    }
+
     @Override
-    public float[] generateEmbedding(String text)
-    {
+    public float[] generateEmbedding(String text) {
 
+        System.out.println("Embedding Model = " + embeddingModel.getClass().getName());
 
-
-       float[] embedding = embeddingModel.embed(text);
-
-       log.info("Generated embedding with {} dimensions",embedding.length);
+        float[] embedding = embeddingModel.embed(text);
 
         return embedding;
-
-
     }
 }
