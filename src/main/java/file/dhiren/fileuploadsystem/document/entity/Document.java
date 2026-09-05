@@ -47,12 +47,15 @@ public class Document {
     private String contentType;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
-    private  String error_message;
+    private  String errorMessage;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length =30)
     private DocumentStatus status = DocumentStatus.UPLOADING;
+
+    @Enumerated(EnumType.STRING)
+    private DocumentProcessingStatus processingStatus;
 
     @CreationTimestamp
     @Column(name = "uploaded_at", updatable = false)

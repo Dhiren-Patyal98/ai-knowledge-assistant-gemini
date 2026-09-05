@@ -15,6 +15,17 @@ public class DocumentProcessingProducer {
 
     public void sendDocumentProcessingEvent(DocumentProcessingEvent event)
     {
-        kafkaTemplate.send(TOPIC,event.getDocumentId().toString(),event);
+        String key = event.getDocumentId().toString();
+
+        kafkaTemplate.send(TOPIC,key,event).whenComplete((result,exception)->{
+            if(exception != null)
+            {
+                System.out.println( "Failed to send Kafka event: " + exception.getMessage());
+            }
+            else
+            {
+                System.out.println("Kafka event sent successfully");
+            }
+        });
     }
 }

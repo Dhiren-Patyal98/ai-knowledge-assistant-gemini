@@ -9,20 +9,20 @@ import org.apache.tika.Tika;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DocumentParserServiceImpl implements DocumentParserService{
 
 
     @Override
-    public String extractText(MultipartFile file) {
+    public String extractText(InputStream inputStream) {
         try {
 
             Tika tika = new Tika();
 
-            String text = tika.parseToString(file.getInputStream());
+            String text = tika.parseToString(inputStream);
 
             log.info("Successfully extracted {} characters", text.length());
 
@@ -31,7 +31,7 @@ public class DocumentParserServiceImpl implements DocumentParserService{
         } catch (
                 IOException | TikaException e) {
 
-            log.error("Failed to extract text from {}", file.getOriginalFilename(), e);
+            log.error("Failed to extract text from {}", e);
 
             throw new DocumentParsingException(
                     "Unable to extract document text",

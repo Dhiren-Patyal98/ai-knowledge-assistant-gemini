@@ -1,25 +1,20 @@
 package file.dhiren.fileuploadsystem.document.service;
 
 
-import com.pgvector.PGvector;
-import file.dhiren.fileuploadsystem.ai.embedding.entity.Embedding;
-import file.dhiren.fileuploadsystem.ai.embedding.repository.EmbeddingRepository;
-import file.dhiren.fileuploadsystem.ai.embedding.service.EmbeddingService;
 import file.dhiren.fileuploadsystem.auth.entity.User;
-import file.dhiren.fileuploadsystem.common.chunking.ChunkingService;
-import file.dhiren.fileuploadsystem.common.parser.DocumentParserService;
 import file.dhiren.fileuploadsystem.common.storage.FileStorageService;
 import file.dhiren.fileuploadsystem.common.util.FileValidationUtil;
 import file.dhiren.fileuploadsystem.document.dto.DocumentResponse;
 import file.dhiren.fileuploadsystem.document.dto.DownloadDocumentResponse;
 import file.dhiren.fileuploadsystem.document.dto.UploadDocumentResponse;
 import file.dhiren.fileuploadsystem.document.entity.Document;
-import file.dhiren.fileuploadsystem.document.entity.DocumentChunk;
+import file.dhiren.fileuploadsystem.document.entity.DocumentProcessingStatus;
 import file.dhiren.fileuploadsystem.document.entity.DocumentStatus;
 import file.dhiren.fileuploadsystem.document.exception.DocumentNotFoundException;
 import file.dhiren.fileuploadsystem.document.mapper.DocumentMapper;
-import file.dhiren.fileuploadsystem.document.repository.DocumentChunkRepository;
 import file.dhiren.fileuploadsystem.document.repository.DocumentRepository;
+import file.dhiren.fileuploadsystem.kafka.event.DocumentProcessingEvent;
+import file.dhiren.fileuploadsystem.kafka.producer.DocumentProcessingProducer;
 import file.dhiren.fileuploadsystem.security.CurrentUserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -51,15 +46,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final FileStorageService fileStorageService;
 
-    private final DocumentParserService documentParserService;
-
-    private final ChunkingService chunkingService;
-
-    private final DocumentChunkRepository documentChunkRepository;
-
-    private final EmbeddingService embeddingService;
-
-    private final EmbeddingRepository embeddingRepository;
+    private final DocumentProcessingProducer documentProcessingProducer;
 
 
 
@@ -83,16 +70,6 @@ public class DocumentServiceImpl implements DocumentService {
         log.info("File stored successfully as {}", storedFileName );
 
 
-        String extractedText = documentParserService.extractText(file);
-
-        log.info("Extracted Text:\n{}", extractedText);
-
-
-        List<String> chunks = chunkingService.chunkText(extractedText);
-
-        log.info("Generated {} chunks", chunks.size());
-
-
         Document document = Document.builder()
                 .user(user)
                 .title(title == null || title.isBlank() ? file.getOriginalFilename() : title)
@@ -102,6 +79,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .originalFileName(file.getOriginalFilename())
                 .contentType(file.getContentType())
                 .status(DocumentStatus.UPLOADED)
+                .processingStatus(DocumentProcessingStatus.PENDING)
                 .build();
 
 
@@ -114,37 +92,11 @@ public class DocumentServiceImpl implements DocumentService {
                 user.getEmail()
         );
 
-        for(int index = 0; index < chunks.size() ;index++)
-        {
-            String chunkText = chunks.get(index);
+        DocumentProcessingEvent event =  new DocumentProcessingEvent(document.getId(),user.getId());
 
-            DocumentChunk documentChunk = DocumentChunk.builder()
-                    .document(savedDocument)
-                    .chunkIndex(index)
-                    .chunkText(chunkText)
-                    .tokenCount(chunkText.length())
-                    .build();
+        documentProcessingProducer.sendDocumentProcessingEvent(event);
 
-            DocumentChunk savedChunk = documentChunkRepository.save(documentChunk);
-
-            float[] embeddingVector = embeddingService.generateEmbedding(chunkText);
-
-//            String embeddingJson = objectMapper.writeValueAsString(embeddingVector);
-
-            Embedding embedding = Embedding.builder()
-                    .chunkId(savedChunk)
-                    .embedding(embeddingVector)
-                    .build();
-
-            embeddingRepository.save(embedding);
-
-            log.info(
-                    "Generated {}-dimension embedding for chunk {}",
-                    embeddingVector.length,
-                    index
-            );
-
-        }
+        log.info("Document processing event published for Document {}" , savedDocument.getId());
 
 //        List<DocumentChunk> documentChunks = IntStream.range(0, chunks.size())
 //                .mapToObj(index -> DocumentChunk.builder()
