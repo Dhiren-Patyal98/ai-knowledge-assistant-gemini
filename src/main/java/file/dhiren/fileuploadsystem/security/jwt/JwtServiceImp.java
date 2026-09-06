@@ -15,14 +15,14 @@ public class JwtServiceImp implements JwtService {
 
 
     @Value("${jwt.secret}")
-    private  String secret;
+    private String secret;
 
     @Value("${jwt.expiration}")
     private long expiration;
 
     private SecretKey getSigningKey()
     {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     private Claims extractClaims(String token)
@@ -56,8 +56,8 @@ public class JwtServiceImp implements JwtService {
     @Override
     public boolean isTokenValid(String token, String email)
     {
-       String username =  extractUsername(token);
+        String username = extractUsername(token);
 
-       return username.equals(email) && !extractClaims(token).getExpiration().before(new Date());
+        return username.equals(email) && !extractClaims(token).getExpiration().before(new Date());
     }
 }
